@@ -1,6 +1,8 @@
 package hyperLogLog
 
 import (
+	"math"
+
 	"github.com/spaolacci/murmur3"
 )
 
@@ -53,8 +55,8 @@ func (hll *HyperLogLog) Add(item string) {
 	r := rho(w, uint8(32-hll.p))     // streak of zeros = index of the leftmost 1-bit in w
 
 	/*
-	* Shorter zero streaks (small r) are common → not very informative.
-	* Longer zero streaks (big r) are rare → strong evidence of high cardinality.
+	* Shorter zero streaks (small r) are common -> not very informative.
+	* Longer zero streaks (big r) are rare -> strong evidence of high cardinality.
 	* HLL relies on the maximum leading-zero count per register as the key statistic.
 	 */
 	if r > hll.M[idx] {
@@ -73,10 +75,22 @@ func (hll *HyperLogLog) Add(item string) {
 */
 func (hll *HyperLogLog) Count() int {
 	var sum float64
+	var zeros uint32
 	for _, v := range hll.M {
 		sum += 1.0 / float64(uint64(1)<<v)
+		if v == 0 {
+			zeros++
+		}
 	}
 	Z := 1.0 / sum
 	E := hll.alphaM * float64(hll.m*hll.m) * Z
-	return int(E) // final cardinality
+
+	if zeros > 0 {
+		smallEstimate := float64(hll.m) * math.Log(float64(hll.m)/float64(zeros))
+		if E <= (5.0/2.0)*float64(hll.m) {
+			return int(smallEstimate)
+		}
+	}
+
+	return int(E)
 }
