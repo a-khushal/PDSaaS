@@ -26,7 +26,7 @@ func TestFalsePositiveRate(t *testing.T) {
 	bf := NewBloom()
 
 	// Add 1000 items
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		bf.Add(string(rune(i)))
 	}
 
